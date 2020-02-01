@@ -8,48 +8,54 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
 
+
 public class Main
 {
+    // URL сайта для парсинга
     private static final String URL = "https://ru.wikipedia.org/wiki/Список_станций_Московского_метрополитена";
+    // CSS запрос для получения названия линии
+    private static final String CSS_GET_LINE_NAME = "td:nth-child(1) span:nth-child(2)";
+    // CSS запрос для получения названия станции
+    private static final String CSS_GET_STATION_NAME = "td:nth-child(2) a";
+    // CSS запрос для получения html блока отдельно взятой станции
+    private static final String CSS_GET_STATIONS_HTML_BLOCK = "table.standard tbody tr";
+    // CSS запрос для получения html блока отдельно взятой линии
+    private static final String CSS_GET_LINES_HTML_BLOCK = "table.navbox-columns-table dd";
+    // CSS запрос для получения номера линии
+    private static final String CSS_GET_LINE_NUMBER = "span:nth-child(2)";
+
+    // Регулярка для приведения имен станций к единой форме отображения
+    private static final String SPOTTER_NAMES_REGEX = "\\s\\(.+\\)";
+    // Регулярка для приведения номеров линий к понятной форме
+    private static final String SPOTTER_NUMBER_LINES_REGEX = "Линия № ";
+
 
     public static void main(String[] args) throws IOException {
         Document document = Jsoup.connect(URL).maxBodySize(0).get();
-        Elements lineNames = document.select("table.standard tbody tr td:nth-child(1)");  // Получаем названия линий
-        Elements stationNames = document.select("table.standard tbody tr td:nth-child(2)"); // Получаем названия станций
-        ArrayList<String> lineName = new ArrayList<>();
-        ArrayList<String> stationName = new ArrayList<>();
-        lineNames.forEach(element -> lineName.add(element.getElementsByAttribute("title").attr("title")));
-        stationNames.forEach(element -> stationName.add(element.getElementsByAttribute("title").attr("title").replaceAll("\\s\\(.+\\)", "")));
-
-
         ArrayList<Station> stations = new ArrayList<>();
-        for (int i = 0; i < stationName.size(); i++){
-            stations.add(new Station(stationName.get(i), lineName.get(i)));
-        }
+        ArrayList<Line> lines = new ArrayList<>();
 
-        stations.forEach(e-> System.out.println("Имя Станции: " + e.getName() + ", имя линии: " + e.getLine()));
+        // TODO Выделить в отдельный метод (принимает документ, возвращает список станций) ps Возможно придется парсить на название линии а номер!!!!
+        Elements stationsHtml = document.select(CSS_GET_STATIONS_HTML_BLOCK);
+        stationsHtml.forEach(element -> {
+                // Проверяю, нет ли пустых значений(а они есть:) )
+                if(!element.select(CSS_GET_LINE_NAME).attr("title").equals("")) {
+                    stations.add(new Station(element.select(CSS_GET_STATION_NAME).attr("title")
+                            .replaceAll(SPOTTER_NAMES_REGEX, "")
+                            , element.select(CSS_GET_LINE_NAME).attr("title")));
+                }});
 
-
-        Elements lineNumber = document.select("table.navbox-columns-table tbody tr td.navbox-list span");
-        Elements lllllll = document.select("table.navbox-columns-table tbody tr td.navbox-list dl dd a:last-child");
-        // TODO lines
-        ArrayList<String> lines = new ArrayList<>();
-        lineNumber.forEach(element -> lines.add(element.getElementsByAttribute("title").attr("title").replaceAll("Линия № ", "")));
-        ArrayList<String> linesnamenamename = new ArrayList<>();
-        lllllll.forEach(element -> linesnamenamename.add(element.text()));
-
-
-        ArrayList<Line> lineArrayList = new ArrayList<>();
-        for(int i = 0; i < lines.size(); i ++){
-            if(i%2 != 0) {
-                lineArrayList.add(new Line(lines.get(i), linesnamenamename.get(i)));
-            }
-        }
-
-        lineArrayList.forEach(line -> System.out.println("имя : " + line.getName() + ", номер: " + line.getNumber()));
+        // TODO Выделить в отдельный метод (принимает документ, возвращает список линий)
+        Elements lineHtml = document.select(CSS_GET_LINES_HTML_BLOCK);
+        lineHtml.forEach(element -> lines.add(new Line(element.select(CSS_GET_LINE_NUMBER).attr("title")
+                    .replaceAll(SPOTTER_NUMBER_LINES_REGEX, "")
+                    , element.select(">a").attr("title").replaceAll(SPOTTER_NAMES_REGEX, ""))));
 
 
-        String jsoup = new GsonBuilder().setPrettyPrinting().create().toJson(lineArrayList);
+
+
+        String jsoup = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(lines);
         System.out.println(jsoup);
+
     }
 }
