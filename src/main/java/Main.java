@@ -4,9 +4,8 @@ import core.Station;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
-
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.*;
 
 
 public class Main
@@ -21,8 +20,10 @@ public class Main
     private static final String CSS_GET_STATIONS_HTML_BLOCK = "table.standard tbody tr";
     // CSS запрос для получения html блока отдельно взятой линии
     private static final String CSS_GET_LINES_HTML_BLOCK = "table.navbox-columns-table dd";
-    // CSS запрос для получения номера линии
+    // CSS запрос для получения номера линии (для линии)
     private static final String CSS_GET_LINE_NUMBER = "span:nth-child(2)";
+    // CSS запрос для получения номера линии (для станции)
+    private static final String CSS_GET_LINE_NUMBER_TO_STATION = "td:nth-child(1) span:nth-child(1)";
 
     // Регулярка для приведения имен станций к единой форме отображения
     private static final String SPOTTER_NAMES_REGEX = "\\s\\(.+\\)";
@@ -35,27 +36,49 @@ public class Main
         ArrayList<Station> stations = new ArrayList<>();
         ArrayList<Line> lines = new ArrayList<>();
 
-        // TODO Выделить в отдельный метод (принимает документ, возвращает список станций) ps Возможно придется парсить на название линии а номер!!!!
+        // TODO Выделить в отдельный метод (принимает документ, возвращает список станций)
         Elements stationsHtml = document.select(CSS_GET_STATIONS_HTML_BLOCK);
         stationsHtml.forEach(element -> {
                 // Проверяю, нет ли пустых значений(а они есть:) )
                 if(!element.select(CSS_GET_LINE_NAME).attr("title").equals("")) {
-                    stations.add(new Station(element.select(CSS_GET_STATION_NAME).attr("title")
-                            .replaceAll(SPOTTER_NAMES_REGEX, "")
-                            , element.select(CSS_GET_LINE_NAME).attr("title")));
+                        stations.add(new Station(element.select(CSS_GET_STATION_NAME).attr("title")
+                                .replaceAll(SPOTTER_NAMES_REGEX, "")
+                                , element.select(CSS_GET_LINE_NUMBER_TO_STATION).text()
+                                // удаляем нули из номеров, для приведения с номерами линий к единой форме
+                                .replaceAll("^0", "")));
                 }});
 
-        // TODO Выделить в отдельный метод (принимает документ, возвращает список линий)
+
+        // TODO Удаление станций закрытой линии
+        stations.removeIf(station -> station.getLine().equals("11А"));
+
+
+
+        // TODO Выделить в отдельный метод Добавить цевт для линий(принимает документ, возвращает список линий)
         Elements lineHtml = document.select(CSS_GET_LINES_HTML_BLOCK);
-        lineHtml.forEach(element -> lines.add(new Line(element.select(CSS_GET_LINE_NUMBER).attr("title")
-                    .replaceAll(SPOTTER_NUMBER_LINES_REGEX, "")
+        lineHtml.forEach(element -> lines.add(new Line((element.select(CSS_GET_LINE_NUMBER).attr("title")
+                .replaceAll(SPOTTER_NUMBER_LINES_REGEX, ""))
                     , element.select(">a").attr("title").replaceAll(SPOTTER_NAMES_REGEX, ""))));
+        
+
+        // TODO метод добавления станций на линии.
+        lines.forEach(line -> stations.forEach(station -> {
+            if(line.getNumber().equals(station.getLine())){
+                line.addStation(station.getName());
+            }
+        }));
+
+        // TODO собираем метро
+        Map<String, List<String>> stationCollect = new TreeMap<>();
+        lines.forEach(line -> stationCollect.put(line.getNumber(), line.getStations()));
+        JsoupCreator jsoupCreator = new JsoupCreator();
+        jsoupCreator.setLines(lines);
+        jsoupCreator.setStations(stationCollect);
 
 
 
 
-        String jsoup = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(lines);
+        String jsoup = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(jsoupCreator);
         System.out.println(jsoup);
-
     }
 }

@@ -1,5 +1,6 @@
 package core;
 
+import java.beans.Transient;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,7 +8,7 @@ public class Line
 {
     private String number;
     private String name;
-    private List<Station> stations;
+    private List<String> stations;
 
     public Line(String number, String name)
     {
@@ -26,14 +27,15 @@ public class Line
         return name;
     }
 
-    public void addStation(Station station)
+    public void addStation(String station)
     {
         stations.add(station);
     }
 
-    public List<Station> getStations()
+    public List<String> getStations()
     {
         return stations;
     }
+
 
 }
