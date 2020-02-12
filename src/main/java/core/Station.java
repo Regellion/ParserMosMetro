@@ -1,6 +1,6 @@
 package core;
 
-public class Station
+public class Station implements Comparable<Station>
 {
     private String line;
     private String name;
@@ -21,6 +21,17 @@ public class Station
         return name;
     }
 
+    @Override
+    public int compareTo(Station station)
+    {
+        return line.compareTo(station.getLine());
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        return compareTo((Station) obj) == 0;
+    }
 
 
     @Override
