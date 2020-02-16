@@ -1,8 +1,13 @@
 package core;
 
+import com.google.gson.annotations.SerializedName;
+
 public class Station implements Comparable<Station>
 {
     private String line;
+    // Думаю что не так кретично как называется это поле в сериализации,
+    // но если что, его можно изменить очень просто
+    //@SerializedName("station")
     private String name;
 
     public Station(String name, String line)
